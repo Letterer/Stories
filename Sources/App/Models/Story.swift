@@ -13,16 +13,25 @@ import Crypto
 final class Story: PostgreSQLUUIDModel {
 
     var id: UUID?
+    var token: String
+    var userId: UUID
     var title: String
     var text: String
+    var language: String?
 
     init(id: UUID? = nil,
+         token: String,
+         userId: UUID,
          title: String,
-         text: String
+         text: String,
+         language: String? = nil
     ) {
         self.id = id
+        self.token = token
+        self.userId = userId
         self.title = title
         self.text = text
+        self.language = language
     }
 }
 
@@ -38,8 +47,11 @@ extension Story: Parameter { }
 extension Story {
     convenience init(from storyDto: StoryDto) {
         self.init(
+            token: storyDto.token,
+            userId: storyDto.userId,
             title: storyDto.title,
-            text: storyDto.text
+            text: storyDto.text,
+            language: storyDto.language
         )
     }
 }
