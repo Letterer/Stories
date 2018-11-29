@@ -14,19 +14,34 @@ final class StoryDto {
     var userId: UUID
     var title: String
     var text: String
+    var created: Date?
+    var modified: Date?
+    var lead: String?
     var language: String?
+    var words: Int?
+    var duration: Int?
 
     init(id: UUID?,
          token: String,
          userId: UUID,
          title: String,
          text: String,
-         language: String? = nil) {
+         created: Date? = nil,
+         modified: Date? = nil,
+         lead: String? = nil,
+         language: String? = nil,
+         words: Int? = nil,
+         duration: Int? = nil) {
         self.token = token
         self.userId = userId
         self.title = title
         self.text = text
+        self.created = created
+        self.modified = modified
+        self.lead = lead
         self.language = language
+        self.words = words
+        self.duration = duration
     }
 }
 
@@ -40,7 +55,12 @@ extension StoryDto {
             userId: story.userId,
             title: story.title,
             text: story.text,
-            language: story.language
+            created: story.created,
+            modified: story.modified,
+            lead: story.lead,
+            language: story.language,
+            words: story.words,
+            duration: story.duration
         )
     }
 }

@@ -17,21 +17,36 @@ final class Story: PostgreSQLUUIDModel {
     var userId: UUID
     var title: String
     var text: String
+    var created: Date
+    var modified: Date
+    var lead: String?
     var language: String?
+    var words: Int?
+    var duration: Int?
 
     init(id: UUID? = nil,
          token: String,
          userId: UUID,
          title: String,
          text: String,
-         language: String? = nil
+         created: Date,
+         modified: Date,
+         lead: String? = nil,
+         language: String? = nil,
+         words: Int? = nil,
+         duration: Int? = nil
     ) {
         self.id = id
         self.token = token
         self.userId = userId
         self.title = title
         self.text = text
+        self.created = created
+        self.modified = modified
+        self.lead = lead
         self.language = language
+        self.words = words
+        self.duration = duration
     }
 }
 
@@ -51,7 +66,12 @@ extension Story {
             userId: storyDto.userId,
             title: storyDto.title,
             text: storyDto.text,
-            language: storyDto.language
+            created: storyDto.created ?? Date(),
+            modified: storyDto.modified ?? Date(),
+            lead: storyDto.lead,
+            language: storyDto.language,
+            words: storyDto.words,
+            duration: storyDto.duration
         )
     }
 }
