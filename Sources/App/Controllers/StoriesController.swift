@@ -18,6 +18,7 @@ final class StoriesController: RouteCollection {
         router.post(StoryDto.self, at: "/stories", use: create)
         router.put(StoryDto.self, at: "/stories", String.parameter, use: update)
         router.delete("/stories", String.parameter, use: delete)
+        router.post("/stories/publish", String.parameter, use: publish)
     }
 
     func stories(request: Request) throws -> Future<[StoryDto]> {
@@ -138,6 +139,31 @@ final class StoriesController: RouteCollection {
         }.transform(to: HTTPStatus.ok)
     }
 
+    func publish(request: Request) throws -> Future<HTTPStatus> {
+
+        let authorizationService = try request.make(AuthorizationService.self)
+        guard let userIdFromToken = try authorizationService.getUserIdFromBearerToken(request: request) else {
+            throw Abort(.unauthorized)
+        }
+
+        let token = try request.parameters.next(String.self).lowercased()
+
+        return Story.query(on: request).filter(\.token == token).first().flatMap(to: Story.self) { storyFromDb in
+
+            guard let story = storyFromDb else {
+                throw StoryError.storyNotExists
+            }
+
+            guard story.userId == userIdFromToken else {
+                throw StoryError.storyNotExists
+            }
+
+            story.published = Date()
+
+            return story.update(on: request)
+        }.transform(to: HTTPStatus.ok)
+    }
+
     private func findDominantLanguage(for text: String) -> String {
         // return NSLinguisticTagger.dominantLanguage(for: text)
         return "en"
@@ -157,10 +183,15 @@ final class StoriesController: RouteCollection {
     }
 
     private func countWords(from text: String) -> Int? {
-        return 10
+
+        let chararacterSet = CharacterSet.whitespacesAndNewlines.union(.punctuationCharacters)
+        let components = text.components(separatedBy: chararacterSet)
+        let words = components.filter { !$0.isEmpty }
+
+        return words.count
     }
 
     private func countDuration(from text: String) -> Int? {
-        return 2
+        return (text.count / 1000) + 1
     }
 }

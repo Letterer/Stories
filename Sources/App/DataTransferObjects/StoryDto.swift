@@ -16,6 +16,7 @@ final class StoryDto {
     var text: String
     var created: Date?
     var modified: Date?
+    var published: Date?
     var lead: String?
     var language: String?
     var words: Int?
@@ -28,6 +29,7 @@ final class StoryDto {
          text: String,
          created: Date? = nil,
          modified: Date? = nil,
+         published: Date? = nil,
          lead: String? = nil,
          language: String? = nil,
          words: Int? = nil,
@@ -38,6 +40,7 @@ final class StoryDto {
         self.text = text
         self.created = created
         self.modified = modified
+        self.published = published
         self.lead = lead
         self.language = language
         self.words = words
@@ -57,6 +60,7 @@ extension StoryDto {
             text: story.text,
             created: story.created,
             modified: story.modified,
+            published: story.published,
             lead: story.lead,
             language: story.language,
             words: story.words,

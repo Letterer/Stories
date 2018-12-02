@@ -19,6 +19,7 @@ final class Story: PostgreSQLUUIDModel {
     var text: String
     var created: Date
     var modified: Date
+    var published: Date?
     var lead: String?
     var language: String?
     var words: Int?
@@ -31,6 +32,7 @@ final class Story: PostgreSQLUUIDModel {
          text: String,
          created: Date,
          modified: Date,
+         published: Date? = nil,
          lead: String? = nil,
          language: String? = nil,
          words: Int? = nil,
@@ -43,6 +45,7 @@ final class Story: PostgreSQLUUIDModel {
         self.text = text
         self.created = created
         self.modified = modified
+        self.published = published
         self.lead = lead
         self.language = language
         self.words = words
@@ -68,6 +71,7 @@ extension Story {
             text: storyDto.text,
             created: storyDto.created ?? Date(),
             modified: storyDto.modified ?? Date(),
+            published: nil,
             lead: storyDto.lead,
             language: storyDto.language,
             words: storyDto.words,
