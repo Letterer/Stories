@@ -24,144 +24,144 @@ final class StoriesController: RouteCollection {
     func stories(request: Request) throws -> Future<[StoryDto]> {
 
         let authorizationService = try request.make(AuthorizationService.self)
-        guard let userIdFromToken = try authorizationService.getUserIdFromBearerToken(request: request) else {
-            throw Abort(.unauthorized)
-        }
+        let userIdFuture = try authorizationService.getUserIdFromBearerTokenOrAbort(on: request)
 
-        return Story.query(on: request).filter(\.userId == userIdFromToken).all().map(to: [StoryDto].self) { storiesFromDb in
+        return userIdFuture.flatMap { userIdFromToken in
+            return Story.query(on: request).filter(\.userId == userIdFromToken).all().map(to: [StoryDto].self) { storiesFromDb in
 
-            var storiesDto: [StoryDto] = []
-            for story in storiesFromDb {
-                let storyDto = StoryDto(from: story)
-                storiesDto.append(storyDto)
+                var storiesDto: [StoryDto] = []
+                for story in storiesFromDb {
+                    let storyDto = StoryDto(from: story)
+                    storiesDto.append(storyDto)
+                }
+
+                return storiesDto
             }
-            
-            return storiesDto
         }
     }
 
     func story(request: Request) throws -> Future<StoryDto> {
 
         let authorizationService = try request.make(AuthorizationService.self)
-        guard let _ = try authorizationService.getUserIdFromBearerToken(request: request) else {
-            throw Abort(.unauthorized)
-        }
+        let userIdFuture = try authorizationService.getUserIdFromBearerTokenOrAbort(on: request)
 
         let token = try request.parameters.next(String.self).lowercased()
 
-        return Story.query(on: request).filter(\.token == token).first().map(to: StoryDto.self) { storyFromDb in
+        return userIdFuture.flatMap { userIdFromToken in
+            return Story.query(on: request).filter(\.token == token).first().map(to: StoryDto.self) { storyFromDb in
 
-            guard let story = storyFromDb else {
-                throw StoryError.storyNotExists
+                guard let story = storyFromDb else {
+                    throw StoryError.storyNotExists
+                }
+
+                let storyDto = StoryDto(from: story)
+                return storyDto
             }
-
-            let storyDto = StoryDto(from: story)
-            return storyDto
         }
     }
 
     func create(request: Request, storyDto: StoryDto) throws -> Future<StoryDto> {
 
         let authorizationService = try request.make(AuthorizationService.self)
-        guard let userIdFromToken = try authorizationService.getUserIdFromBearerToken(request: request) else {
-            throw Abort(.unauthorized)
-        }
+        let userIdFuture = try authorizationService.getUserIdFromBearerTokenOrAbort(on: request)
 
-        let story = Story(from: storyDto)
-        story.language = self.findDominantLanguage(for: story.text)
-        story.userId = userIdFromToken
-
-        let clearText = self.removeHtml(from: story.text)
-        story.lead = self.generateLead(from: clearText)
-        story.words = self.countWords(from: clearText)
-        story.duration = self.countDuration(from: clearText)
-
-        return story.save(on: request).map(to: StoryDto.self) { story in
-            return StoryDto(from: story)
-        }
-    }
-
-    func update(request: Request, storyDto: StoryDto) throws -> Future<StoryDto> {
-
-        let authorizationService = try request.make(AuthorizationService.self)
-        guard let userIdFromToken = try authorizationService.getUserIdFromBearerToken(request: request) else {
-            throw Abort(.unauthorized)
-        }
-
-        let token = try request.parameters.next(String.self).lowercased()
-
-        return Story.query(on: request).filter(\.token == token).first().flatMap(to: Story.self) { storyFromDb in
-
-            guard let story = storyFromDb else {
-                throw StoryError.storyNotExists
-            }
-
-            if story.userId != userIdFromToken {
-                throw StoryError.storyNotExists
-            }
-
-            story.title = storyDto.title
-            story.text = storyDto.text
+        return userIdFuture.flatMap { userIdFromToken in
+            let story = Story(from: storyDto)
             story.language = self.findDominantLanguage(for: story.text)
-            story.modified = Date()
+            story.userId = userIdFromToken
 
             let clearText = self.removeHtml(from: story.text)
             story.lead = self.generateLead(from: clearText)
             story.words = self.countWords(from: clearText)
             story.duration = self.countDuration(from: clearText)
 
-            return story.update(on: request)
-        }.map(to: StoryDto.self) { story in
-            return StoryDto(from: story)
+            return story.save(on: request).map(to: StoryDto.self) { story in
+                return StoryDto(from: story)
+            }
+        }
+    }
+
+    func update(request: Request, storyDto: StoryDto) throws -> Future<StoryDto> {
+
+        let authorizationService = try request.make(AuthorizationService.self)
+        let userIdFuture = try authorizationService.getUserIdFromBearerTokenOrAbort(on: request)
+
+        let token = try request.parameters.next(String.self).lowercased()
+
+        return userIdFuture.flatMap { userIdFromToken in
+            return Story.query(on: request).filter(\.token == token).first().flatMap(to: Story.self) { storyFromDb in
+
+                guard let story = storyFromDb else {
+                    throw StoryError.storyNotExists
+                }
+
+                if story.userId != userIdFromToken {
+                    throw StoryError.storyNotExists
+                }
+
+                story.title = storyDto.title
+                story.text = storyDto.text
+                story.language = self.findDominantLanguage(for: story.text)
+                story.modified = Date()
+
+                let clearText = self.removeHtml(from: story.text)
+                story.lead = self.generateLead(from: clearText)
+                story.words = self.countWords(from: clearText)
+                story.duration = self.countDuration(from: clearText)
+
+                return story.update(on: request)
+            }.map(to: StoryDto.self) { story in
+                return StoryDto(from: story)
+            }
         }
     }
 
     func delete(request: Request) throws -> Future<HTTPStatus> {
 
         let authorizationService = try request.make(AuthorizationService.self)
-        guard let userIdFromToken = try authorizationService.getUserIdFromBearerToken(request: request) else {
-            throw Abort(.unauthorized)
-        }
+        let userIdFuture = try authorizationService.getUserIdFromBearerTokenOrAbort(on: request)
 
         let token = try request.parameters.next(String.self).lowercased()
 
-        return Story.query(on: request).filter(\.token == token).first().flatMap(to: Void.self) { storyFromDb in
+        return userIdFuture.flatMap { userIdFromToken in
+            return Story.query(on: request).filter(\.token == token).first().flatMap(to: Void.self) { storyFromDb in
 
-            guard let story = storyFromDb else {
-                throw StoryError.storyNotExists
-            }
+                guard let story = storyFromDb else {
+                    throw StoryError.storyNotExists
+                }
 
-            guard story.userId == userIdFromToken else {
-                throw StoryError.storyNotExists
-            }
+                guard story.userId == userIdFromToken else {
+                    throw StoryError.storyNotExists
+                }
 
-            return story.delete(on: request)
-        }.transform(to: HTTPStatus.ok)
+                return story.delete(on: request)
+            }.transform(to: HTTPStatus.ok)
+        }
     }
 
     func publish(request: Request) throws -> Future<HTTPStatus> {
 
         let authorizationService = try request.make(AuthorizationService.self)
-        guard let userIdFromToken = try authorizationService.getUserIdFromBearerToken(request: request) else {
-            throw Abort(.unauthorized)
-        }
+        let userIdFuture = try authorizationService.getUserIdFromBearerTokenOrAbort(on: request)
 
         let token = try request.parameters.next(String.self).lowercased()
 
-        return Story.query(on: request).filter(\.token == token).first().flatMap(to: Story.self) { storyFromDb in
+        return userIdFuture.flatMap { userIdFromToken in
+            return Story.query(on: request).filter(\.token == token).first().flatMap(to: Story.self) { storyFromDb in
 
-            guard let story = storyFromDb else {
-                throw StoryError.storyNotExists
-            }
+                guard let story = storyFromDb else {
+                    throw StoryError.storyNotExists
+                }
 
-            guard story.userId == userIdFromToken else {
-                throw StoryError.storyNotExists
-            }
+                guard story.userId == userIdFromToken else {
+                    throw StoryError.storyNotExists
+                }
 
-            story.published = Date()
+                story.published = Date()
 
-            return story.update(on: request)
-        }.transform(to: HTTPStatus.ok)
+                return story.update(on: request)
+            }.transform(to: HTTPStatus.ok)
+        }
     }
 
     private func findDominantLanguage(for text: String) -> String {

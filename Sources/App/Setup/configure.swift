@@ -8,9 +8,6 @@ public func configure(_ config: inout Config, _ env: inout Environment, _ servic
     /// Register database providers first.
     try configureDatabaseProvider(services: &services)
 
-    // Register authorization key service.
-    try registerAuthorizationPrivateKey(services: &services)
-
     /// Register routes to the router.
     try registerRoutes(services: &services)
 
@@ -49,16 +46,6 @@ private func registerRoutes(services: inout Services) throws {
     services.register(router, as: Router.self)
 }
 
-private func registerAuthorizationPrivateKey(services: inout Services) throws {
-    guard let publicKey = Environment.get("LETTERER_PUBLIC_KEY") else { throw Abort(.internalServerError) }
-    guard let emailServiceAddress = Environment.get("LETTERER_EMAIL_SERVICE_ADDRESS") else { throw Abort(.internalServerError) }
-
-    services.register { container -> SettingsStorage in
-        let publicKeyWithNewLines = publicKey.replacingOccurrences(of: "<br>", with: "\n")
-        return SettingsStorage(publicKey: publicKeyWithNewLines, emailServiceAddress: emailServiceAddress)
-    }
-}
-
 private func configureDatabaseProvider(services: inout Services) throws {
     try services.register(FluentPostgreSQLProvider())
 }
@@ -68,7 +55,7 @@ private func configureDatabase(services: inout Services) throws {
     guard let connectionString = Environment.get("LETTERER_STORIES_CONNECTION_STRING") else { throw Abort(.internalServerError) }
 
     // Configure a PostgreSQL database
-    guard let databaseConfig = PostgreSQLDatabaseConfig(url: connectionString) else {
+    guard let databaseConfig = PostgreSQLDatabaseConfig(url: connectionString, transport: .unverifiedTLS) else {
         return
     }
 
@@ -82,9 +69,11 @@ private func configureDatabase(services: inout Services) throws {
     /// Configure migrations
     var migrations = MigrationConfig()
     migrations.add(model: Story.self, database: .psql)
+    migrations.add(model: Setting.self, database: .psql)
     services.register(migrations)
 }
 
 private func registerServices(services: inout Services) {
     services.register(AuthorizationService.self)
+    services.register(SettingsService(), as: SettingsServiceType.self)
 }
